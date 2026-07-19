@@ -1,0 +1,55 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: dimisa-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: dimisa
+      MYSQL_USER: alejandroz
+      MYSQL_PASSWORD: hgmaza25
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    container_name: dimisa-api
+    restart: always
+    build:
+      context: ../DIMISA_GO_API
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: alejandroz
+      DB_PASS: hgmaza25
+      DB_NAME: dimisa
+      JWT_SECRET: etapadesarrollo
+    ports:
+      - "8080:8080"
+
+  frontend:
+    container_name: dimisa-frontend
+    restart: always
+    build:
+      context: ../DIMISA_FRONT
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+
+volumes:
+  mysql_data:
+
+
+#lsa siguientes lineas van justo sobre ports:
+#    expose:
+#      - "8080"
+# 4 espacios la primer linea y la segunda linea 6 espacios

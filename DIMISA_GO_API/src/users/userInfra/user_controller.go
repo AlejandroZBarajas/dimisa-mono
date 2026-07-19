@@ -1,0 +1,358 @@
+package userInfra
+
+import (
+	"DIMISA/src/users/userApp"
+	"DIMISA/src/users/userDomain/usersEntities"
+	"encoding/json"
+	"fmt"
+	"net/http"
+)
+
+type UserController struct {
+	CreateUseCase       *userApp.CreateUserUseCase
+	UpdateUseCase       *userApp.UpdateUserUseCase
+	GetAllUseCase       *userApp.GetAllUsersUseCase
+	GetByRolUseCase     *userApp.GetUsersByRolUseCase
+	GetByIDUseCase      *userApp.GetUserByIDUseCase
+	DeleteUseCase       *userApp.DeleteUserUseCase
+	GetByAreaUseCase    *userApp.GetUsersByAreaUseCase
+	GetByCendisUseCase  *userApp.GetUsersByCendisUseCase
+	GetUserRolesUseCase *userApp.GetUserRolesUseCase
+}
+
+func NewUserController(
+	create *userApp.CreateUserUseCase,
+	update *userApp.UpdateUserUseCase,
+	deleteUC *userApp.DeleteUserUseCase,
+	getAll *userApp.GetAllUsersUseCase,
+	getByRol *userApp.GetUsersByRolUseCase,
+	getById *userApp.GetUserByIDUseCase,
+	getByArea *userApp.GetUsersByAreaUseCase,
+	getByCendis *userApp.GetUsersByCendisUseCase,
+	getUserRoles *userApp.GetUserRolesUseCase,
+) *UserController {
+	return &UserController{
+		CreateUseCase:       create,
+		UpdateUseCase:       update,
+		DeleteUseCase:       deleteUC,
+		GetAllUseCase:       getAll,
+		GetByRolUseCase:     getByRol,
+		GetByIDUseCase:      getById,
+		GetByAreaUseCase:    getByArea,
+		GetByCendisUseCase:  getByCendis,
+		GetUserRolesUseCase: getUserRoles,
+	}
+}
+
+func (c *UserController) CreateUserHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var input struct {
+		Nombres   string `json:"nombres"`
+		Apellido1 string `json:"apellido1"`
+		Apellido2 string `json:"apellido2"`
+		Username  string `json:"username"`
+		Password  string `json:"password"`
+		Id_rol    int32  `json:"id_rol"`
+		Id_area   *int32 `json:"id_area,omitempty"`
+		Id_cendis *int32 `json:"id_cendis,omitempty"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, fmt.Sprintf("Error al leer datos: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	user := &usersEntities.UserEntity{
+		Nombres:   input.Nombres,
+		Apellido1: input.Apellido1,
+		Apellido2: input.Apellido2,
+		Username:  input.Username,
+		Password:  input.Password,
+		Id_rol:    input.Id_rol,
+	}
+
+	userID, err := c.CreateUseCase.Execute(user)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error al crear usuario: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	switch input.Id_rol {
+	case 2:
+		err = c.CreateUseCase.Repo.CreateAdminUser(userID)
+	case 3:
+		err = c.CreateUseCase.Repo.CreateJefeUser(userID)
+	case 4:
+		err = c.CreateUseCase.Repo.CreateAdmisionUser(userID)
+
+	case 5:
+		if input.Id_area == nil {
+			http.Error(w, "Id_area es requerido para rol ENFERMERIA", http.StatusBadRequest)
+			return
+		}
+		err = c.CreateUseCase.Repo.CreateUserEnfermeria(userID, *input.Id_area)
+	case 6:
+		if input.Id_cendis == nil {
+			http.Error(w, "Id_cendis es requerido para rol CENDIS", http.StatusBadRequest)
+			return
+		}
+		err = c.CreateUseCase.Repo.CreateUserCendis(userID, *input.Id_cendis)
+	default:
+		err = nil
+	}
+
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error al asignar usuario a su tabla: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"id_usuario": userID,
+	})
+}
+
+func (c *UserController) UpdateUserHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var input struct {
+		Id_usuario int32  `json:"id_usuario"`
+		Nombres    string `json:"nombres"`
+		Apellido1  string `json:"apellido1"`
+		Apellido2  string `json:"apellido2"`
+		Username   string `json:"username"`
+		Password   string `json:"password"`
+		Id_rol     int32  `json:"id_rol"`
+		Id_area    *int32 `json:"id_area,omitempty"`
+		Id_cendis  *int32 `json:"id_cendis,omitempty"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, fmt.Sprintf("Error al leer datos: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	user := &usersEntities.UserEntity{
+		Id_usuario: input.Id_usuario,
+		Nombres:    input.Nombres,
+		Apellido1:  input.Apellido1,
+		Apellido2:  input.Apellido2,
+		Username:   input.Username,
+		Password:   input.Password,
+		Id_rol:     input.Id_rol,
+	}
+
+	if err := c.UpdateUseCase.Repo.RemoveUserFromAllRoleTables(user.Id_usuario); err != nil {
+		http.Error(w, fmt.Sprintf("Error al limpiar tablas de rol: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// actualizar datos básicos
+	if err := c.UpdateUseCase.Execute(user); err != nil {
+		http.Error(w, fmt.Sprintf("Error al actualizar usuario: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	var err error
+	switch input.Id_rol {
+	case 2:
+		err = c.CreateUseCase.Repo.CreateAdminUser(user.Id_usuario)
+	case 3:
+		err = c.CreateUseCase.Repo.CreateJefeUser(user.Id_usuario)
+	case 4:
+		err = c.CreateUseCase.Repo.CreateAdmisionUser(user.Id_usuario)
+	case 5:
+		if input.Id_area == nil {
+			http.Error(w, "Id_area es requerido para rol ENFERMERIA", http.StatusBadRequest)
+			return
+		}
+		err = c.CreateUseCase.Repo.CreateUserEnfermeria(user.Id_usuario, *input.Id_area)
+	case 6:
+		if input.Id_cendis == nil {
+			http.Error(w, "Id_cendis es requerido para rol CENDIS", http.StatusBadRequest)
+			return
+		}
+		err = c.CreateUseCase.Repo.CreateUserCendis(user.Id_usuario, *input.Id_cendis)
+	}
+
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error al asignar usuario a su tabla de rol: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(user)
+}
+
+func (c *UserController) GetUsersByRolHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var input struct {
+		Id_rol int32 `json:"id_rol"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, fmt.Sprintf("Error al leer datos: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	users, err := c.GetByRolUseCase.Execute(input.Id_rol)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error al obtener usuarios por rol: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(users)
+}
+
+func (c *UserController) GetUserByIDHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var input struct {
+		Id_usuario int32 `json:"id_usuario"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, fmt.Sprintf("Error al leer datos: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	user, err := c.GetByIDUseCase.Execute(input.Id_usuario)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error al obtener usuario: %v", err), http.StatusInternalServerError)
+		return
+	}
+	if user == nil {
+		http.Error(w, "Usuario no encontrado", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(user)
+}
+
+func (c *UserController) DeleteUserHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var input struct {
+		Id_usuario int32 `json:"id_usuario"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, fmt.Sprintf("Error al leer datos: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	err := c.DeleteUseCase.Execute(input.Id_usuario)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error al eliminar usuario: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(fmt.Sprintf("Usuario con ID %d eliminado exitosamente", input.Id_usuario)))
+}
+
+func (c *UserController) GetUsersByAreaHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var input struct {
+		Id_area int32 `json:"id_area"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, fmt.Sprintf("Error al leer datos: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	users, err := c.GetByAreaUseCase.Execute(input.Id_area)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error al obtener usuarios por área: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(users)
+}
+
+func (c *UserController) GetUsersByCendisHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var input struct {
+		Id_cendis int32 `json:"id_cendis"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, fmt.Sprintf("Error al leer datos: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	users, err := c.GetByCendisUseCase.Execute(input.Id_cendis)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error al obtener usuarios por cendis: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(users)
+}
+
+func (c *UserController) GetAllUsersHandler(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != http.MethodGet {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+
+	users, err := c.GetAllUseCase.Execute()
+
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error al obtener usuarios: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(users)
+
+}
+
+func (c *UserController) GetUserRolesHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+
+	roles, err := c.GetUserRolesUseCase.Execute()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error al obtener roles de usuario: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(roles)
+}
