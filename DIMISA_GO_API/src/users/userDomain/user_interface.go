@@ -19,7 +19,7 @@ type UserInterface interface {
 
 	GetById(id int32) (*usersEntities.UserEntity, error)
 
-	GetByRol(rol int32) ([]*usersEntities.UserEntity, error)
+	GetByRol(rol int32) ([]*usersEntities.UserDTO, error)
 
 	GetAll() ([]*usersEntities.UserDTO, error)
 
