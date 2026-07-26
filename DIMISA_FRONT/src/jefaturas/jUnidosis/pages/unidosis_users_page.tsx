@@ -5,7 +5,6 @@ import type UserDTO from "../../../entities/user_DTO";
 import UserCard from "../../../admin/components/users/user_card";
 import UserForm from "../../../admin/components/users/user_form";
 import { getUsersByRol, createUser, updateUser } from "../../../services/users_service";
-import { MdAdd } from "react-icons/md";
 
 export default function AdminUsers() {
 
@@ -74,15 +73,6 @@ export default function AdminUsers() {
         ))}
       </select>
 
-      <button
-        onClick={() => {
-          setEditingUser(null);
-          setShowModal(true);
-        }}
-        className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg"
-      >
-        <MdAdd size={28} />
-      </button>
     </div>
         </div>
 
