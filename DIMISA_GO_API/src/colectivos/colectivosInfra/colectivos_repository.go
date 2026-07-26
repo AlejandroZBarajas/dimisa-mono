@@ -337,3 +337,54 @@ func (r *ColectivoRepository) CloseColectivo(id int32) error {
 
 	return nil
 }
+
+func (r *ColectivoRepository) GetColectivoById(id int32) (*colectivoEntity.ColectivoDTO, error) {
+	query := `
+		SELECT 
+			c.id_colectivo,
+			CONCAT('F-', c.id_colectivo) AS folio,
+			c.tipo_id,
+			t.nombre AS tipo,
+			c.fecha,
+			c.id_user,
+			CONCAT(u.nombres, ' ', u.apellido1, ' ', u.apellido2) AS nombre_usuario,
+			c.id_area,
+			c.id_cendis,
+			ce.cendis_nombre AS cendis
+		FROM colectivos c
+		INNER JOIN tipos t ON c.tipo_id = t.id_tipo
+		INNER JOIN usuarios u ON c.id_user = u.id_usuario
+		INNER JOIN cendis ce ON c.id_cendis = ce.id_cendis
+		WHERE c.id_colectivo = ?
+	`
+
+	var colectivo colectivoEntity.ColectivoDTO
+
+	err := r.DB.QueryRow(query, id).Scan(
+		&colectivo.Id_colectivo,
+		&colectivo.Folio,
+		&colectivo.Tipo_id,
+		&colectivo.Tipo,
+		&colectivo.Fecha,
+		&colectivo.Id_user,
+		&colectivo.Nombre_usuario,
+		&colectivo.Id_area,
+		&colectivo.Id_cendis,
+		&colectivo.Cendis,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	detalles, err := r.getDetallesByColectivoID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	colectivo.Claves = detalles
+
+	return &colectivo, nil
+}

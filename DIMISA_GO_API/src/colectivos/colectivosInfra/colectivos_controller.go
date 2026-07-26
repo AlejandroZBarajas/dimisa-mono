@@ -15,6 +15,7 @@ type ColectivosController struct {
 	GetUpdatablesByCendisUC *colectivosApp.GetUpdatableColectivosByCendis
 	AddToColectivoUC        *colectivosApp.AddToColectivo
 	CloseColectivoUC        *colectivosApp.CloseColectivo
+	GetColectivoByIdUC      *colectivosApp.GetColectivoById
 }
 
 func NewColectivosController(
@@ -24,6 +25,7 @@ func NewColectivosController(
 	getUpdatablesByCendisUC *colectivosApp.GetUpdatableColectivosByCendis,
 	addToColectivoUC *colectivosApp.AddToColectivo,
 	closeColectivoUC *colectivosApp.CloseColectivo,
+	getColectivoByIdUC *colectivosApp.GetColectivoById,
 ) *ColectivosController {
 	return &ColectivosController{
 		CreateColectivoUC:       createUC,
@@ -32,6 +34,7 @@ func NewColectivosController(
 		GetUpdatablesByCendisUC: getUpdatablesByCendisUC,
 		AddToColectivoUC:        addToColectivoUC,
 		CloseColectivoUC:        closeColectivoUC,
+		GetColectivoByIdUC:      getColectivoByIdUC,
 	}
 }
 
@@ -164,4 +167,24 @@ func (cc *ColectivosController) CloseColectivoHandler(w http.ResponseWriter, r *
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Colectivo cerrado exitosamente"})
+}
+
+func (cc *ColectivosController) GetColectivoByIdHandler(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Id_colectivo int32 `json:"id_colectivo"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	colectivo, err := cc.GetColectivoByIdUC.Execute(body.Id_colectivo)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(colectivo)
 }
