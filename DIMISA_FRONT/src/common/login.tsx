@@ -62,6 +62,9 @@ export default function Login() {
         case 6:
           navigate("/unidosis/colectivos")
           break
+        case 7:
+          navigate("/coord_users")
+          break
         default:
         setError("Rol no reconocido");
         break;
