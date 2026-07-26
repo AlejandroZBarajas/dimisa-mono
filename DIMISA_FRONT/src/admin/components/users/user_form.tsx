@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useAuth } from "../../../common/auth/auth_context";
 import type UserEntity from "../../../entities/user_entity";
 import type UserDTO from "../../../entities/user_DTO";
 import type UserRolEntity from "../../../entities/user_rol_entity";
@@ -14,6 +15,9 @@ interface Props {
 }
 
 export default function UserForm({ initialData, onSubmit }: Props) {
+  const {auth} = useAuth()
+  const rol = auth.user?.rol
+
   const [formData, setFormData] = useState<UserEntity>(
     initialData || {
       nombres: "",
@@ -219,8 +223,8 @@ export default function UserForm({ initialData, onSubmit }: Props) {
           </>
         )}
 
-        <label className="block text-sm font-medium">Rol</label>
-       <select
+        {/* <label className="block text-sm font-medium">Rol</label>
+        <select
           name="id_rol"
           value={formData.id_rol || ""}
           onChange={handleChange}
@@ -234,7 +238,29 @@ export default function UserForm({ initialData, onSubmit }: Props) {
               {rol.rol}
             </option>
           ))}
-        </select>
+        </select> */}
+        {(rol === 1 || rol === 2) && (
+          <>
+            <label className="block text-sm font-medium">Rol</label>
+            <select
+              name="id_rol"
+              value={formData.id_rol || ""}
+              onChange={handleChange}
+              className="border rounded-lg p-2"
+              required
+            >
+              <option value="">Selecciona un rol</option>
+
+              {roles.map((rol) => (
+                <option key={rol.id_rol} value={rol.id_rol}>
+                  {rol.rol}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
+
+
       </div>
 
       {renderRoleFields()}

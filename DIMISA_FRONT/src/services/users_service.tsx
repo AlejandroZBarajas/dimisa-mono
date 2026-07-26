@@ -67,3 +67,15 @@ export async function getUserRoles(): Promise<UserRolEntity[]> {
   if (!res.ok) throw new Error("Error al obtener roles de usuario");
   return await res.json();
 }
+
+export async function getUsersByRol(id_rol: number): Promise<UserDTO[]> {
+  const res = await fetch(`${API_URL}by-rol`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ id_rol }),
+  });
+  if (!res.ok) throw new Error("Error al obtener usuario por rol");
+  return await res.json();
+}
