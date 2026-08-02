@@ -71,7 +71,7 @@ export default function TabHistorialColectivos() {
           onChange={(event) =>
             handleIdChange(event.target.value)
           }
-          placeholder="Folio del colectivo"
+          placeholder="ej: 1034"
           className="w-full rounded border px-3 py-2"
         />
 
@@ -92,7 +92,7 @@ export default function TabHistorialColectivos() {
 
       {!cargando && !error && !colectivo && (
         <p className="text-gray-600">
-          Ingresa el folio del colectivo
+          Ingresa el número de folio del colectivo
         </p>
       )}
 

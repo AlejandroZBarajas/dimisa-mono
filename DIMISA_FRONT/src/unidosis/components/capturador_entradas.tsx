@@ -15,7 +15,6 @@ export default function CapturadorEntradas() {
       try {
         const res = await getPendingColectivosByCendis(id_cendis); 
         setColectivos(res ?? []);
-        console.log("Colectivos pendientes:", res);
       } catch (err) {
         console.error("Error cargando colectivos:", err);
       } finally {
