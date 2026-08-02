@@ -4,6 +4,7 @@ type DetalleEntrada struct {
 	Id_medicamento  int32 `json:"id_medicamento"`
 	Cantidad        int32 `json:"cantidad"`
 	PiezasEsperadas int32 `json:"piezas_esperadas"`
+	PiezasRecibidas int32 `json:"piezas_recibidas"`
 }
 
 type EntradaRequest struct {

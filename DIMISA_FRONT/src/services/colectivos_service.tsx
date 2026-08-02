@@ -108,3 +108,20 @@ export async function closeColectivo(id_colectivo: number):Promise<void>{
     throw error
   }
 }
+
+export async function getColectivoById(id_colectivo: number):Promise<ColectivoDTO>{
+  try{
+    const response = await fetch(`${API_URL}/colectivos/by-id`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({id_colectivo})
+    })
+    if(!response.ok){
+      throw new Error ("No se pudo obtener el colectivo")
+    }
+    return await response.json()
+  }catch(error){
+    console.error("error al obtener colectivo: ", error)
+    throw error
+  }
+}

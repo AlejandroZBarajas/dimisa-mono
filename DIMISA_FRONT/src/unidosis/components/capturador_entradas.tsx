@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../common/auth/auth_context";
 import { getPendingColectivosByCendis } from "../../services/colectivos_service";
-//import ColectivoCard from "./colectivos/colectivo_para_entrada";
 import ColectivoParaEntrada from "./colectivos/colectivo_para_entrada";
 import type { ColectivoDTO } from "../../entities/colectivo_DTO";
 

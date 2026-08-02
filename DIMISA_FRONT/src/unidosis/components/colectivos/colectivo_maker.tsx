@@ -148,7 +148,7 @@ export default function ColectivoMaker({colectivosExistentes, onColectivoCreado}
     }
 
   return (
-    <div className="w-5/12 p-4">
+    <div className="w-6/12 p-4">
       <h2 className="text-xl font-semibold mb-4">Crear Colectivo</h2>
 
       <SelectorTipo

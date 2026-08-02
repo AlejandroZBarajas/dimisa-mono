@@ -6,4 +6,5 @@ export interface ColectivoDetalleDTO {
   descripcion?: string | undefined;
   cantidad: number | undefined;
   piezas_esperadas: number; 
+  piezas_recibidas?: number | null;
 }
