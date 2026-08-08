@@ -118,7 +118,6 @@ export default function ColectivoMaker({colectivosExistentes, onColectivoCreado}
         try {
           const resultado = await addToColectivo(id_cendis, tipo_id, detalles);
           console.log(resultado)
-          alert("Artículos agregados al colectivo existente");
         } catch (error) {
           console.error("Error específico al agregar:", error);
           throw error;
@@ -132,7 +131,6 @@ export default function ColectivoMaker({colectivosExistentes, onColectivoCreado}
           claves: detalles,
         };
         await createColectivo(colectivo);
-        alert("Colectivo creado exitosamente");
       }
 
       setColectivosPorTipo((prev) => ({
@@ -148,7 +146,7 @@ export default function ColectivoMaker({colectivosExistentes, onColectivoCreado}
     }
 
   return (
-    <div className="w-5/12 p-4">
+    <div className="w-6/12 p-4">
       <h2 className="text-xl font-semibold mb-4">Crear Colectivo</h2>
 
       <SelectorTipo

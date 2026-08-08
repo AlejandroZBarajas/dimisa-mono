@@ -125,16 +125,10 @@ export default function SalidasTipo({ area, cendis, tipo, id_tipo }: Props) {
 
       PrintColSal(html);
 
-    console.log("antes de cerrarSalida, id:", idSalidaCreada)
     await cerrarSalida(idSalidaCreada);
-    console.log("después de cerrarSalida")
-
-      console.log("cerrarSalida completado") 
 
       setLista([]);
       setIsExpanded(false);
-
-      alert("Salida impresa y cerrada exitosamente");
 
     } catch (error) {
       console.error("Error en el proceso:", error);

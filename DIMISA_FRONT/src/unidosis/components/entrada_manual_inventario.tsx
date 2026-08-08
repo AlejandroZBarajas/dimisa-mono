@@ -77,7 +77,7 @@ export default function EntradaManualInventario() {
         cantidad,
       })),
     });
-    alert("Inventario cargado correctamente");
+
     setLista([]);
   } catch {
     alert("Error al cargar el inventario");

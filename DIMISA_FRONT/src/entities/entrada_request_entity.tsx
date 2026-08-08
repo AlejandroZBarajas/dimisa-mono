@@ -2,6 +2,7 @@ interface DetalleEntrada {
   id_medicamento: number;
   cantidad: number;
   piezas_esperadas?: number; 
+  piezas_recibidas?: number
 }
 
 export interface EntradaRequest {

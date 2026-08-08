@@ -3,7 +3,6 @@ import type { EntradaRequest, CargarInventarioRequest } from "../entities/entrad
 const API_URL = import.meta.env.VITE_API_URL+"/entradas/"
 
 export async function capturarEntrada(entrada: EntradaRequest): Promise<void> {
-  console.log("[capturarEntrada] payload:", JSON.stringify(entrada, null, 2));
 
   const res = await fetch(`${API_URL}capturar`, {
     method: "POST",

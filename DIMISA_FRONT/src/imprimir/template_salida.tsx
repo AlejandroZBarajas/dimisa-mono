@@ -16,7 +16,7 @@ interface TemplateData {
 }
 
 export function TemplateSalida(data: TemplateData): string {
-    console.log("Generando plantilla con datos:", data);
+  //  console.log("Generando plantilla con datos:", data);
   return `
     <html>
       <head>
