@@ -28,7 +28,6 @@ export default function DeficitCronico() {
     setEstado("loading")
     try {
       const res = await getDeficitCronico(idCendis, anio)
-      console.log(res)
       setData(res)
       setEstado("idle")
     } catch {

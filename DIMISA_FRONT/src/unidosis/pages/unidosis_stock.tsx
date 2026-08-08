@@ -10,7 +10,6 @@ function UnidosisStock(){
     const { auth } = useAuth();
     
     const id_cendis = auth.user?.cnd
-    //console.log("CENDIS DEL USUARIO:", id_cendis)
 
     return(
         <div>
