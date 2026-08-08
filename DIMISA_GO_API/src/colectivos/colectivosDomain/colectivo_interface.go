@@ -11,4 +11,6 @@ type ColectivoInterface interface {
 	GetUpdatableColectivosByCendis(id int32) ([]*colectivoEntity.ColectivoDTO, error)
 	AddToColectivo(id_cendis, tipo int32, claves []*colectivoEntity.ColectivoDetalleEntity) error
 	CloseColectivo(id_colectivo int32) error
+	//GetClosedColectivosByCendis(id int32) ([]*colectivoEntity.ColectivoDTO, error)
+	GetColectivoById(id int32) (*colectivoEntity.ColectivoDTO, error)
 }

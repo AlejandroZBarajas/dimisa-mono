@@ -73,94 +73,6 @@ func (r *UserRepository) DeleteUser(id int32) error {
 	return err
 }
 
-func (r *UserRepository) GetAll() ([]*usersEntities.UserDTO, error) {
-	query := `
-		SELECT 
-			u.id_usuario, 
-			u.nombres, 
-			u.apellido1, 
-			u.apellido2, 
-			u.username, 
-			u.id_rol,
-			ro.rol,
-
-			eu.id_area,
-			a.nombre_area,
-
-			uu.id_cendis,
-			c.cendis_nombre
-
-		FROM usuarios u
-		INNER JOIN roles ro ON u.id_rol = ro.id_rol
-
-		LEFT JOIN enfermeria_users eu ON eu.id_user = u.id_usuario
-		LEFT JOIN areas a ON a.id_area = eu.id_area
-
-		LEFT JOIN unidosis_users uu ON uu.id_user = u.id_usuario
-		LEFT JOIN cendis c ON c.id_cendis = uu.id_cendis
-
-	`
-
-	rows, err := r.DB.Query(query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var users []*usersEntities.UserDTO
-
-	for rows.Next() {
-		var user usersEntities.UserDTO
-
-		var idArea sql.NullInt32
-		var nombreArea sql.NullString
-		var idCendis sql.NullInt32
-		var cendisNombre sql.NullString
-
-		err := rows.Scan(
-			&user.Id_usuario,
-			&user.Nombres,
-			&user.Apellido1,
-			&user.Apellido2,
-			&user.Username,
-			&user.Id_rol,
-			&user.Rol,
-
-			&idArea,
-			&nombreArea,
-			&idCendis,
-			&cendisNombre,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		if idArea.Valid {
-			user.Id_area = &idArea.Int32
-		}
-
-		if nombreArea.Valid {
-			user.NombreArea = &nombreArea.String
-		}
-
-		if idCendis.Valid {
-			user.Id_cendis = &idCendis.Int32
-		}
-
-		if cendisNombre.Valid {
-			user.CendisNombre = &cendisNombre.String
-		}
-
-		users = append(users, &user)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return users, nil
-}
-
 func (r *UserRepository) GetById(id int32) (*usersEntities.UserEntity, error) {
 	query := `SELECT id_usuario, nombres, apellido1, apellido2, username, id_rol FROM usuarios WHERE id_usuario = ?`
 
@@ -206,36 +118,6 @@ func (r *UserRepository) GetUserRoles() ([]*usersEntities.UserRolEntity, error) 
 	}
 
 	return roles, nil
-}
-
-func (r *UserRepository) GetByRol(rol int32) ([]*usersEntities.UserEntity, error) {
-	query := `SELECT id_usuario, nombres, apellido1, apellido2, username, id_rol 
-	          FROM usuarios WHERE id_rol = ?`
-
-	rows, err := r.DB.Query(query, rol)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var users []*usersEntities.UserEntity
-	for rows.Next() {
-		var user usersEntities.UserEntity
-		err := rows.Scan(
-			&user.Id_usuario,
-			&user.Nombres,
-			&user.Apellido1,
-			&user.Apellido2,
-			&user.Username,
-			&user.Id_rol,
-		)
-		if err != nil {
-			return nil, err
-		}
-		users = append(users, &user)
-	}
-
-	return users, nil
 }
 
 func (r *UserRepository) GetByAreaID(id int32) ([]*usersEntities.UserEnfermeriaEntity, error) {
@@ -338,4 +220,99 @@ func (r *UserRepository) RemoveUserFromAllRoleTables(userID int32) error {
 		}
 	}
 	return nil
+}
+
+func (r *UserRepository) getUsers(where string, args ...interface{}) ([]*usersEntities.UserDTO, error) {
+	query := `
+		SELECT 
+			u.id_usuario,
+			u.nombres,
+			u.apellido1,
+			u.apellido2,
+			u.username,
+			u.id_rol,
+			ro.rol,
+
+			eu.id_area,
+			a.nombre_area,
+
+			uu.id_cendis,
+			c.cendis_nombre
+
+		FROM usuarios u
+		INNER JOIN roles ro ON u.id_rol = ro.id_rol
+
+		LEFT JOIN enfermeria_users eu ON eu.id_user = u.id_usuario
+		LEFT JOIN areas a ON a.id_area = eu.id_area
+
+		LEFT JOIN unidosis_users uu ON uu.id_user = u.id_usuario
+		LEFT JOIN cendis c ON c.id_cendis = uu.id_cendis
+	` + where
+
+	rows, err := r.DB.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []*usersEntities.UserDTO
+
+	for rows.Next() {
+		var user usersEntities.UserDTO
+
+		var idArea sql.NullInt32
+		var nombreArea sql.NullString
+		var idCendis sql.NullInt32
+		var cendisNombre sql.NullString
+
+		err := rows.Scan(
+			&user.Id_usuario,
+			&user.Nombres,
+			&user.Apellido1,
+			&user.Apellido2,
+			&user.Username,
+			&user.Id_rol,
+			&user.Rol,
+
+			&idArea,
+			&nombreArea,
+			&idCendis,
+			&cendisNombre,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if idArea.Valid {
+			user.Id_area = &idArea.Int32
+		}
+
+		if nombreArea.Valid {
+			user.NombreArea = &nombreArea.String
+		}
+
+		if idCendis.Valid {
+			user.Id_cendis = &idCendis.Int32
+		}
+
+		if cendisNombre.Valid {
+			user.CendisNombre = &cendisNombre.String
+		}
+
+		users = append(users, &user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
+func (r *UserRepository) GetAll() ([]*usersEntities.UserDTO, error) {
+	return r.getUsers("")
+}
+
+func (r *UserRepository) GetByRol(rol int32) ([]*usersEntities.UserDTO, error) {
+	return r.getUsers(" WHERE u.id_rol = ?", rol)
 }
