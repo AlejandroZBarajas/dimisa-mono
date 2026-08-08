@@ -246,10 +246,8 @@ func (r *EntradasRepository) marcarColectivoCapturado(tx *sql.Tx, idColectivo in
 	log.Printf("[marcarColectivoCapturado] id_colectivo=%d OK", idColectivo)
 	return nil
 }
-func (r *EntradasRepository) insertarEntradasColectivo(
-	tx *sql.Tx,
-	entrada *entradaEntity.EntradaRequest,
-) error {
+
+func (r *EntradasRepository) insertarEntradasColectivo(tx *sql.Tx, entrada *entradaEntity.EntradaRequest) error {
 	resultado, err := tx.Exec(`
 		INSERT INTO entradas_colectivo (
 			id_colectivo,

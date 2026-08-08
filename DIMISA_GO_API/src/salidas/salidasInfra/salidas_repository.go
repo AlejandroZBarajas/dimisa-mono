@@ -199,7 +199,6 @@ func (repo *SalidasRepository) GetSalidasPendientes(id_cendis int32) (*[]salidaE
 
 func (repo *SalidasRepository) AddToSalida(id_cendis, id_area, tipo int32, claves *[]salidaEntity.SalidaDetalleEntity) error {
 	return fmt.Errorf("método no implementado aún")
-
 }
 
 func (repo *SalidasRepository) CerrarSalida(id_salida int32) error {
@@ -216,12 +215,10 @@ func (repo *SalidasRepository) CerrarSalida(id_salida int32) error {
 		return fmt.Errorf("salida no encontrada: %w", err)
 	}
 
-	// Validar que la salida esté pendiente
 	if !pendiente {
 		return fmt.Errorf("la salida ya fue cerrada anteriormente")
 	}
 
-	// Validar que la salida sea editable
 	if !editable {
 		return fmt.Errorf("la salida no es editable")
 	}

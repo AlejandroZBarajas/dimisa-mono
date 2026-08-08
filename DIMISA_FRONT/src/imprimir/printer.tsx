@@ -11,5 +11,5 @@ export function PrintColSal(html: string): void {
   setTimeout(() => {
     ventana.focus();
     ventana.print();
-  }, 10);
+  }, 1);
 }
