@@ -140,11 +140,6 @@ export default function ColectivoParaEntrada({ colectivo }: Props) {
         detalles,
       };
 
-      console.log(
-        "[ColectivoParaEntrada] payload:",
-        JSON.stringify(payload, null, 2),
-      );
-
       await capturarEntrada(payload);
       window.location.reload();
     } catch (error) {
