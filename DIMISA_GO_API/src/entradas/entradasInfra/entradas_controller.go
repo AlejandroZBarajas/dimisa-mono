@@ -4,6 +4,7 @@ import (
 	"DIMISA/src/entradas/entradasApp"
 	"DIMISA/src/entradas/entradasDomain/entradaEntity"
 	"encoding/json"
+	"log"
 	"net/http"
 )
 
@@ -52,6 +53,7 @@ func (c *EntradasController) CapturarInventario(w http.ResponseWriter, r *http.R
 	}
 
 	if err := c.CapturarInventarioUC.Execute(&inventario); err != nil {
+		log.Printf("[CapturarInventario] ERROR: %v", err)
 		http.Error(w, "Error al cargar inventario", http.StatusInternalServerError)
 		return
 	}

@@ -21,6 +21,24 @@ func (r *EntradasRepository) CapturarInventario(inventario *entradaEntity.Invent
 		return fmt.Errorf("detalles vacíos")
 	}
 
+	log.Printf(
+		"[CapturarInventario] cendis=%d usuario=%d detalles_recibidos=%d",
+		inventario.Id_cendis,
+		inventario.Id_usuario,
+		len(inventario.Detalles),
+	)
+
+	for i, d := range inventario.Detalles {
+		log.Printf(
+			"[CapturarInventario] detalle[%d] medicamento=%d cantidad=%d piezas_esperadas=%d piezas_recibidas=%d",
+			i,
+			d.Id_medicamento,
+			d.Cantidad,
+			d.PiezasEsperadas,
+			d.PiezasRecibidas,
+		)
+	}
+
 	tx, err := r.DB.Begin()
 	if err != nil {
 		return err
@@ -62,7 +80,13 @@ func (r *EntradasRepository) CapturarInventario(inventario *entradaEntity.Invent
 	placeholders := make([]string, 0, len(inventario.Detalles))
 	args := make([]interface{}, 0, len(inventario.Detalles)*4)
 
-	for _, d := range inventario.Detalles {
+	for i, d := range inventario.Detalles {
+		log.Printf(
+			"[CapturarInventario] índice=%d id_medicamento=%d cantidad=%d",
+			i,
+			d.Id_medicamento,
+			d.Cantidad,
+		)
 		placeholders = append(placeholders, "(?, ?, ?, ?, NOW())")
 		args = append(args,
 			idInventario,
@@ -82,10 +106,22 @@ func (r *EntradasRepository) CapturarInventario(inventario *entradaEntity.Invent
 			updated_at = NOW()
 	`, strings.Join(placeholders, ", "))
 
-	_, err = tx.Exec(query, args...)
+	res, err := tx.Exec(query, args...)
 	if err != nil {
+		log.Printf("[CapturarInventario] ERROR INSERT: %v", err)
 		return fmt.Errorf("error insertando detalles: %w", err)
 	}
+
+	filas, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error obteniendo filas afectadas: %w", err)
+	}
+
+	log.Printf(
+		"[CapturarInventario] INSERT OK: detalles=%d rows_affected=%d",
+		len(inventario.Detalles),
+		filas,
+	)
 
 	// 3. actualizar timestamp del inventario
 	_, err = tx.Exec(`
