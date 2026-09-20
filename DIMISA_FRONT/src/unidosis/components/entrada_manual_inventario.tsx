@@ -37,13 +37,13 @@ export default function EntradaManualInventario() {
         );
       }
       return [
-        ...prev,
         {
           id_medicamento: id,
           clave: selected.clave_med,
           descripcion: selected.descripcion,
           cantidad,
         },
+        ...prev,
       ];
     });
 
@@ -77,8 +77,10 @@ export default function EntradaManualInventario() {
         cantidad,
       })),
     });
-
+    
     setLista([]);
+    window.location.reload();
+    
   } catch {
     alert("Error al cargar el inventario");
   } finally {

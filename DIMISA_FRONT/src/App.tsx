@@ -15,6 +15,7 @@ import UnidosisStock from "./unidosis/pages/unidosis_stock";
 import CPM from "./jefaturas/jUnidosis/pages/cpm";
 import ReportesPage from "./jefaturas/jUnidosis/pages/reportes_page";
 import UnidosisUsers from "./jefaturas/jUnidosis/pages/unidosis_users_page";
+import ConsumoUnidosis from "./jefaturas/jUnidosis/pages/consumo_unidosis_page";
 
 export default function App() {
 
@@ -109,6 +110,12 @@ export default function App() {
       <Route path="/coord_users" element={
         <ProtectedRoute allowedRoles={[7]} >
           <UnidosisUsers/>
+        </ProtectedRoute> 
+      }/>
+
+      <Route path="/consumo" element={
+        <ProtectedRoute allowedRoles={[1, 3, 7]} >
+          <ConsumoUnidosis/>
         </ProtectedRoute> 
       }/>
 
