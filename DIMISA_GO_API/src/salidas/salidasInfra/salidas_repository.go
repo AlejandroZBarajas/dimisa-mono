@@ -374,7 +374,7 @@ func (repo *SalidasRepository) CreateSalida(salida *salidaEntity.SalidaEntity) (
 			id_inventario = ? 
 			AND id_medicamento = ?
 			AND cantidad >= ?
-	`
+		`
 
 	for _, detalle := range salida.Claves {
 		res, err := tx.Exec(
@@ -386,7 +386,10 @@ func (repo *SalidasRepository) CreateSalida(salida *salidaEntity.SalidaEntity) (
 			detalle.Cantidad,
 		)
 		if err != nil {
-			return 0, fmt.Errorf("error al descontar inventario: %w", err)
+			return 0, fmt.Errorf(
+				"error al descontar inventario: %w",
+				err,
+			)
 		}
 
 		rows, _ := res.RowsAffected()
@@ -396,6 +399,17 @@ func (repo *SalidasRepository) CreateSalida(salida *salidaEntity.SalidaEntity) (
 				detalle.Id_medicamento,
 			)
 		}
+
+		// Eliminar registros con cantidad 0 del inventario
+		queryEliminarVacio := `
+				DELETE FROM inventario_detalle
+				WHERE id_inventario = ?
+				AND cantidad = 0
+			`
+		_, err = tx.Exec(
+			queryEliminarVacio,
+			idInventario,
+		)
 	}
 
 	// 7. Commit

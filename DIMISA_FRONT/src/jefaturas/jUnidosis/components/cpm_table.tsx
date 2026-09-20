@@ -102,7 +102,7 @@ const materialFiltrado = useMemo(() => {
       .catch(() => setEstado("error"))
 
   }, [])
-      console.log(data)
+      
 
   if (estado === "loading")
     return <p className="mt-4 text-sm text-gray-500 animate-pulse">Cargando CPM…</p>

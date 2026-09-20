@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../common/auth/auth_context";
 import { getPendingColectivosByCendis } from "../../services/colectivos_service";
-//import ColectivoCard from "./colectivos/colectivo_para_entrada";
 import ColectivoParaEntrada from "./colectivos/colectivo_para_entrada";
 import type { ColectivoDTO } from "../../entities/colectivo_DTO";
 
@@ -16,7 +15,6 @@ export default function CapturadorEntradas() {
       try {
         const res = await getPendingColectivosByCendis(id_cendis); 
         setColectivos(res ?? []);
-        console.log("Colectivos pendientes:", res);
       } catch (err) {
         console.error("Error cargando colectivos:", err);
       } finally {

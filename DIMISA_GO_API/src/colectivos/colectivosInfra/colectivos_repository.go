@@ -110,7 +110,9 @@ func (r *ColectivoRepository) GetColectivosByCendis(id int32) ([]*colectivoEntit
 	return colectivos, nil
 }
 
-func (r *ColectivoRepository) getDetallesByColectivoID(id int32) ([]colectivoEntity.ColectivoDetalleDTO, error) {
+func (r *ColectivoRepository) getDetallesByColectivoID(
+	id int32,
+) ([]colectivoEntity.ColectivoDetalleDTO, error) {
 	query := `
 		SELECT 
 			cd.id_detalle,
@@ -118,9 +120,12 @@ func (r *ColectivoRepository) getDetallesByColectivoID(id int32) ([]colectivoEnt
 			cd.id_medicamento,
 			m.clave_med,
 			m.descripcion,
-			cd.cantidad
+			cd.cantidad,
+			cd.piezas_esperadas,
+			cd.piezas_recibidas
 		FROM colectivo_detalle cd
-		INNER JOIN medicamentos m ON m.id_medicamento = cd.id_medicamento
+		INNER JOIN medicamentos m 
+			ON m.id_medicamento = cd.id_medicamento
 		WHERE cd.id_colectivo = ?;
 	`
 
@@ -134,6 +139,7 @@ func (r *ColectivoRepository) getDetallesByColectivoID(id int32) ([]colectivoEnt
 
 	for rows.Next() {
 		var d colectivoEntity.ColectivoDetalleDTO
+
 		if err := rows.Scan(
 			&d.Id_detalle,
 			&d.Id_colectivo,
@@ -141,11 +147,17 @@ func (r *ColectivoRepository) getDetallesByColectivoID(id int32) ([]colectivoEnt
 			&d.Clave,
 			&d.Descripcion,
 			&d.Cantidad,
+			&d.Piezas_esperadas,
+			&d.Piezas_recibidas,
 		); err != nil {
 			return nil, err
 		}
 
 		detalles = append(detalles, d)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return detalles, nil

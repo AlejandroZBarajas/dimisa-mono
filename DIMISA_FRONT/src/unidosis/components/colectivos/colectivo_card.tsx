@@ -30,6 +30,8 @@ async function handleImprimir() {
       clave: item.clave ?? "",
       descripcion: item.descripcion ?? "",
       cantidad: item.cantidad ?? 0, 
+      piezas_esperadas: item.piezas_esperadas ?? null,
+      piezas_recibidas: item.piezas_recibidas ?? null,
     })),
   });
 

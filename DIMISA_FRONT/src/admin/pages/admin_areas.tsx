@@ -18,7 +18,7 @@ function AdminAreas(){
             const data = await getAreas()
             setAreas(data)
         }catch(error){
-            console.log("error al cargar areas", error)
+            console.error("error al cargar areas", error)
         }
     }
 
@@ -43,7 +43,7 @@ function AdminAreas(){
             setAreaEditando(null)
 
         } catch (error){
-            console.log("error al guardar: ", error)
+            console.error("error al guardar: ", error)
         }
     }
 
@@ -58,7 +58,7 @@ function AdminAreas(){
             await deleteArea(id)
             setAreas(areas.filter((a) => a.id_area !== id))
         } catch (err){
-            console.log("error al eliminar: ",err)
+            console.error("error al eliminar: ",err)
         }
     }
     return(

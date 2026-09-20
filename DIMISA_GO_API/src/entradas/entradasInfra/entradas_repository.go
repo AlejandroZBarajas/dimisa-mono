@@ -21,6 +21,24 @@ func (r *EntradasRepository) CapturarInventario(inventario *entradaEntity.Invent
 		return fmt.Errorf("detalles vacíos")
 	}
 
+	log.Printf(
+		"[CapturarInventario] cendis=%d usuario=%d detalles_recibidos=%d",
+		inventario.Id_cendis,
+		inventario.Id_usuario,
+		len(inventario.Detalles),
+	)
+
+	for i, d := range inventario.Detalles {
+		log.Printf(
+			"[CapturarInventario] detalle[%d] medicamento=%d cantidad=%d piezas_esperadas=%d piezas_recibidas=%d",
+			i,
+			d.Id_medicamento,
+			d.Cantidad,
+			d.PiezasEsperadas,
+			d.PiezasRecibidas,
+		)
+	}
+
 	tx, err := r.DB.Begin()
 	if err != nil {
 		return err
@@ -62,7 +80,13 @@ func (r *EntradasRepository) CapturarInventario(inventario *entradaEntity.Invent
 	placeholders := make([]string, 0, len(inventario.Detalles))
 	args := make([]interface{}, 0, len(inventario.Detalles)*4)
 
-	for _, d := range inventario.Detalles {
+	for i, d := range inventario.Detalles {
+		log.Printf(
+			"[CapturarInventario] índice=%d id_medicamento=%d cantidad=%d",
+			i,
+			d.Id_medicamento,
+			d.Cantidad,
+		)
 		placeholders = append(placeholders, "(?, ?, ?, ?, NOW())")
 		args = append(args,
 			idInventario,
@@ -82,10 +106,22 @@ func (r *EntradasRepository) CapturarInventario(inventario *entradaEntity.Invent
 			updated_at = NOW()
 	`, strings.Join(placeholders, ", "))
 
-	_, err = tx.Exec(query, args...)
+	res, err := tx.Exec(query, args...)
 	if err != nil {
+		log.Printf("[CapturarInventario] ERROR INSERT: %v", err)
 		return fmt.Errorf("error insertando detalles: %w", err)
 	}
+
+	filas, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error obteniendo filas afectadas: %w", err)
+	}
+
+	log.Printf(
+		"[CapturarInventario] INSERT OK: detalles=%d rows_affected=%d",
+		len(inventario.Detalles),
+		filas,
+	)
 
 	// 3. actualizar timestamp del inventario
 	_, err = tx.Exec(`
@@ -137,7 +173,7 @@ func (r *EntradasRepository) CapturarEntrada(entrada *entradaEntity.EntradaReque
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-func (r *EntradasRepository) actualizarInventario(tx *sql.Tx, entrada *entradaEntity.EntradaRequest) error {
+func (r *EntradasRepository) actualizarInventario(tx *sql.Tx, entrada *entradaEntity.EntradaRequest) error { //se SUMAN cantidades entrantes al inventario
 	_, err := tx.Exec(`
         INSERT IGNORE INTO inventarios (id_cendis, updated_at)
         VALUES (?, NOW())
@@ -156,10 +192,18 @@ func (r *EntradasRepository) actualizarInventario(tx *sql.Tx, entrada *entradaEn
 	log.Printf("[actualizarInventario] id_inventario=%d", idInventario)
 
 	placeholders := make([]string, 0, len(entrada.Detalles))
-	args := make([]interface{}, 0, len(entrada.Detalles)*5)
+	args := make([]interface{}, 0, len(entrada.Detalles)*4)
 	for _, d := range entrada.Detalles {
 		placeholders = append(placeholders, "(?, ?, ?, ?, NOW())")
-		args = append(args, idInventario, d.Id_medicamento, d.Cantidad, entrada.Id_usuario)
+
+		args = append(
+			args,
+			idInventario,
+			d.Id_medicamento,
+			d.PiezasRecibidas,
+			entrada.Id_usuario,
+		)
+		log.Printf("[args saliendo del for] args: %+v", args)
 	}
 
 	_, err = tx.Exec(fmt.Sprintf(`
@@ -170,19 +214,15 @@ func (r *EntradasRepository) actualizarInventario(tx *sql.Tx, entrada *entradaEn
             updated_by = VALUES(updated_by),
             updated_at = NOW()
     `, strings.Join(placeholders, ", ")), args...)
+
 	if err != nil {
 		return fmt.Errorf("bulk insert inventario_detalle: %w", err)
 	}
 
 	_, err = tx.Exec(`
-        DELETE FROM inventario_detalle WHERE id_inventario = ? AND cantidad <= 0
-    `, idInventario)
-	if err != nil {
-		return fmt.Errorf("DELETE cantidad<=0: %w", err)
-	}
-
-	_, err = tx.Exec(`
-        UPDATE inventarios SET updated_at = NOW() WHERE id_inventario = ?
+        UPDATE inventarios 
+		SET updated_at = NOW() 
+		WHERE id_inventario = ?
     `, idInventario)
 	if err != nil {
 		return fmt.Errorf("UPDATE inventarios updated_at: %w", err)
@@ -192,76 +232,47 @@ func (r *EntradasRepository) actualizarInventario(tx *sql.Tx, entrada *entradaEn
 	return nil
 }
 
-func (r *EntradasRepository) actualizarPiezasEsperadas(tx *sql.Tx, entrada *entradaEntity.EntradaRequest) error {
+func (r *EntradasRepository) actualizarPiezasEsperadas(tx *sql.Tx, entrada *entradaEntity.EntradaRequest) error { //Actualiza los valores por piezas en el colectivo
 	for _, d := range entrada.Detalles {
-		_, err := tx.Exec(`
-            UPDATE colectivo_detalle
-            SET piezas_esperadas = ?
-            WHERE id_colectivo = ? AND id_medicamento = ?
-        `, d.PiezasEsperadas, entrada.Id_colectivo, d.Id_medicamento)
-		if err != nil {
-			return fmt.Errorf("UPDATE piezas_esperadas id_medicamento=%d: %w", d.Id_medicamento, err)
-		}
-	}
-	log.Printf("[actualizarPiezasEsperadas] OK")
-	return nil
-}
-
-func (r *EntradasRepository) insertarEntradasColectivo(tx *sql.Tx, entrada *entradaEntity.EntradaRequest) error {
-	recibido := make(map[int32]int32, len(entrada.Detalles))
-	esperado := make(map[int32]int32, len(entrada.Detalles)) // ← nuevo
-	for _, d := range entrada.Detalles {
-		recibido[d.Id_medicamento] += d.Cantidad
-		esperado[d.Id_medicamento] = d.PiezasEsperadas // ← del payload
-	}
-
-	rows, err := tx.Query(`
-        SELECT id_medicamento FROM colectivo_detalle WHERE id_colectivo = ?
-    `, entrada.Id_colectivo)
-	if err != nil {
-		return fmt.Errorf("SELECT colectivo_detalle: %w", err)
-	}
-	defer rows.Close()
-
-	placeholders := make([]string, 0)
-	args := make([]interface{}, 0)
-
-	for rows.Next() {
-		var idMed int32
-		if err := rows.Scan(&idMed); err != nil {
-			return fmt.Errorf("Scan colectivo_detalle: %w", err)
-		}
-		placeholders = append(placeholders, "(?, ?, ?, ?, ?)")
-		args = append(args,
+		resultado, err := tx.Exec(`
+			UPDATE colectivo_detalle
+			SET piezas_esperadas = ?,
+			    piezas_recibidas = ?
+			WHERE id_colectivo = ?
+			  AND id_medicamento = ?
+		`,
+			d.PiezasEsperadas,
+			d.PiezasRecibidas,
 			entrada.Id_colectivo,
-			entrada.Id_cendis,
-			idMed,
-			esperado[idMed], // ← piezas esperadas del payload
-			recibido[idMed],
+			d.Id_medicamento,
 		)
-	}
-	if err := rows.Err(); err != nil {
-		return fmt.Errorf("rows.Err colectivo_detalle: %w", err)
+		if err != nil {
+			return fmt.Errorf(
+				"UPDATE piezas id_medicamento=%d: %w",
+				d.Id_medicamento,
+				err,
+			)
+		}
+
+		filas, err := resultado.RowsAffected()
+		if err != nil {
+			return fmt.Errorf(
+				"RowsAffected id_medicamento=%d: %w",
+				d.Id_medicamento,
+				err,
+			)
+		}
+
+		if filas == 0 {
+			return fmt.Errorf(
+				"el medicamento %d no pertenece al colectivo %d",
+				d.Id_medicamento,
+				entrada.Id_colectivo,
+			)
+		}
 	}
 
-	if len(placeholders) == 0 {
-		log.Printf("[insertarEntradasColectivo] WARN colectivo_detalle vacío")
-		return nil
-	}
-
-	_, err = tx.Exec(fmt.Sprintf(`
-        INSERT INTO entradas_colectivo
-            (id_colectivo, id_cendis, id_medicamento, cantidad_solicitada, cantidad_recibida)
-        VALUES %s
-        ON DUPLICATE KEY UPDATE
-            cantidad_solicitada = VALUES(cantidad_solicitada),
-            cantidad_recibida   = VALUES(cantidad_recibida)
-    `, strings.Join(placeholders, ", ")), args...)
-	if err != nil {
-		return fmt.Errorf("bulk insert entradas_colectivo: %w", err)
-	}
-
-	log.Printf("[insertarEntradasColectivo] OK filas=%d", len(placeholders))
+	log.Printf("[actualizarPiezasEsperadas] OK")
 	return nil
 }
 
@@ -273,5 +284,41 @@ func (r *EntradasRepository) marcarColectivoCapturado(tx *sql.Tx, idColectivo in
 		return fmt.Errorf("UPDATE colectivos capturado: %w", err)
 	}
 	log.Printf("[marcarColectivoCapturado] id_colectivo=%d OK", idColectivo)
+	return nil
+}
+func (r *EntradasRepository) insertarEntradasColectivo(tx *sql.Tx, entrada *entradaEntity.EntradaRequest) error {
+	resultado, err := tx.Exec(`
+		INSERT INTO entradas_colectivo (
+			id_colectivo,
+			id_cendis,
+			id_medicamento,
+			cantidad_solicitada,
+			cantidad_recibida
+		)
+		SELECT
+			cd.id_colectivo,
+			?,
+			cd.id_medicamento,
+			cd.piezas_esperadas,
+			cd.piezas_recibidas
+		FROM colectivo_detalle cd
+		WHERE cd.id_colectivo = ?
+		ON DUPLICATE KEY UPDATE
+			cantidad_solicitada = VALUES(cantidad_solicitada),
+			cantidad_recibida   = VALUES(cantidad_recibida)
+	`,
+		entrada.Id_cendis,
+		entrada.Id_colectivo,
+	)
+	if err != nil {
+		return fmt.Errorf("INSERT entradas_colectivo: %w", err)
+	}
+
+	filas, err := resultado.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("RowsAffected entradas_colectivo: %w", err)
+	}
+
+	log.Printf("[insertarEntradasColectivo] OK filas_afectadas=%d", filas)
 	return nil
 }
