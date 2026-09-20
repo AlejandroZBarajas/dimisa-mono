@@ -11,6 +11,8 @@ import (
 	"DIMISA/src/claves/clavesInfra"
 	"DIMISA/src/colectivos/colectivosApp"
 	"DIMISA/src/colectivos/colectivosInfra"
+	consumoUnidosisApp "DIMISA/src/consumoUnidosis/application"
+	consumoUnidosisInfra "DIMISA/src/consumoUnidosis/infrastructure"
 	"DIMISA/src/core/auth"
 	"DIMISA/src/cpm/cpmApp"
 	"DIMISA/src/cpm/cpmInfra"
@@ -313,7 +315,26 @@ func RegisterRoutes(db *sql.DB) http.Handler {
 	mux.HandleFunc("/colectivos-por-periodo", colectivosPorPeriodoController.GetColectivosPorPeriodo) // GET
 
 	log.Println("Rutas de ColectivosPorPeriodo registradas")
-	//log.Fatal(http.ListenAndServe(":8080", handlerWithCors))
+
+	// CONSUMO UNIDOSIS      ---------- EL CPM COMO DEBIÓ SER DESDE EL INICIO
+
+	consumoUnidosisRepo := &consumoUnidosisInfra.ConsumoUnidosisRepository{DB: db}
+
+	getConsumoUnidosisUC := &consumoUnidosisApp.GetConsumoUnidosis{Repo: consumoUnidosisRepo}
+	getConsumoCendisUC := &consumoUnidosisApp.GetConsumoUnidosisCendis{Repo: consumoUnidosisRepo}
+	getConsumoAreaUC := &consumoUnidosisApp.GetConsumoUnidosisArea{Repo: consumoUnidosisRepo}
+	consumoUnidosisController := consumoUnidosisInfra.NewConsumoUnidosisController(
+		getConsumoUnidosisUC,
+		getConsumoCendisUC,
+		getConsumoAreaUC,
+	)
+
+	mux.HandleFunc("/consumo-unidosis", consumoUnidosisController.GetConsumoHandler)
+	mux.HandleFunc("/consumo-unidosis/cendis", consumoUnidosisController.GetConsumoCendisHandler)
+	mux.HandleFunc("/consumo-unidosis/areas", consumoUnidosisController.GetConsumoAreaHandler)
+
+	log.Println("Rutas de consumo unidosis registradas")
+
 	log.Println("Servidor escuchando en :8080")
 	return corsMiddleware(mux)
 }
