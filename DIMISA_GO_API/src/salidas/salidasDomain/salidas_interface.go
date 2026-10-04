@@ -12,6 +12,5 @@ type SalidasInterface interface {
 	GetSalidasPendientes(id_cendis int32) (*[]salidaEntity.SalidaEntity, error)
 	AddToSalida(id_cendis, id_area, tipo int32, claves *[]salidaEntity.SalidaDetalleEntity) error
 	CerrarSalida(id_salida int32) error
-	//GetClosedSalidasByCendis(id_cendis int32) (*[]salidaEntity.SalidaEntity, error)
-	//GetSalidaById(id_salida int32) (*salidaEntity.SalidaEntity, error)
+	GetClosedSalidasByCendisAndDate(id_cendis int32, date string) (*[]salidaEntity.SalidaDTO, error)
 }

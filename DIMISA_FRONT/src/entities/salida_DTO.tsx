@@ -1,14 +1,15 @@
-import type SalidaDetalleDTO from "./salida_detalle_DTO"
-export default interface SalidaDTO{
-    folio: string
-    id_salida:number
-    id_area: number
-    area: string
-    id_cendis: number
-    cendis: string
-    id_usuario: number
-    usuario: string
-    fecha: string
-    created_at: string
-    claves: SalidaDetalleDTO[]
+export interface SalidaCerradaDetalleDTO {
+  clave: string;
+  descripcion: string;
+  cantidad: number;
+}
+
+export interface SalidaDTO {
+  folio: string;
+  tipo: string;
+  cendis: string;
+  area: string;
+  usuario: string;
+  fecha: string;
+  claves: SalidaCerradaDetalleDTO[];
 }

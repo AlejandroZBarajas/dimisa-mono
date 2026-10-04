@@ -8,16 +8,18 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type SalidasController struct {
-	CreateUseCase               *salidasApp.CreateSalida
-	UpdateUseCase               *salidasApp.UpdateSalida
-	DeleteUseCase               *salidasApp.DeleteSalida
-	GetSalidasByCendisUseCase   *salidasApp.GetSalidasByCendis
-	GetSalidasPendientesUseCase *salidasApp.GetSalidasPendientes
-	AddToSalidaUseCase          *salidasApp.AddToSalida
-	CerrarSalidaUseCase         *salidasApp.CerrarSalida
+	CreateUseCase                          *salidasApp.CreateSalida
+	UpdateUseCase                          *salidasApp.UpdateSalida
+	DeleteUseCase                          *salidasApp.DeleteSalida
+	GetSalidasByCendisUseCase              *salidasApp.GetSalidasByCendis
+	GetSalidasPendientesUseCase            *salidasApp.GetSalidasPendientes
+	AddToSalidaUseCase                     *salidasApp.AddToSalida
+	CerrarSalidaUseCase                    *salidasApp.CerrarSalida
+	GetClosedSalidasByCendisAndDateUseCase *salidasApp.GetClosedSalidasByCendisAndDate
 }
 
 func NewSalidasController(
@@ -28,15 +30,17 @@ func NewSalidasController(
 	getSalidasPendientesUC *salidasApp.GetSalidasPendientes,
 	addToSalidaUC *salidasApp.AddToSalida,
 	cerrarSalidaUC *salidasApp.CerrarSalida,
+	getClosedSalidasByCendisAndDateUC *salidasApp.GetClosedSalidasByCendisAndDate,
 ) *SalidasController {
 	return &SalidasController{
-		CreateUseCase:               createUC,
-		UpdateUseCase:               updateUC,
-		GetSalidasByCendisUseCase:   getSalidasByCendisUC,
-		DeleteUseCase:               deleteUC,
-		GetSalidasPendientesUseCase: getSalidasPendientesUC,
-		AddToSalidaUseCase:          addToSalidaUC,
-		CerrarSalidaUseCase:         cerrarSalidaUC,
+		CreateUseCase:                          createUC,
+		UpdateUseCase:                          updateUC,
+		GetSalidasByCendisUseCase:              getSalidasByCendisUC,
+		DeleteUseCase:                          deleteUC,
+		GetSalidasPendientesUseCase:            getSalidasPendientesUC,
+		AddToSalidaUseCase:                     addToSalidaUC,
+		CerrarSalidaUseCase:                    cerrarSalidaUC,
+		GetClosedSalidasByCendisAndDateUseCase: getClosedSalidasByCendisAndDateUC,
 	}
 }
 
@@ -235,4 +239,40 @@ func (ctrl *SalidasController) CerrarSalidaHandler(w http.ResponseWriter, r *htt
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"message": "Salida cerrada exitosamente"})
+}
+
+func (c *SalidasController) GetClosedSalidasByCendisAndDate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+
+	idCendisStr := r.URL.Query().Get("id_cendis")
+	fecha := r.URL.Query().Get("fecha")
+
+	if idCendisStr == "" || fecha == "" {
+		http.Error(w, "id_cendis y fecha son obligatorios", http.StatusBadRequest)
+		return
+	}
+
+	idCendis, err := strconv.ParseInt(idCendisStr, 10, 32)
+	if err != nil {
+		http.Error(w, "id_cendis inválido", http.StatusBadRequest)
+		return
+	}
+
+	if _, err := time.Parse("2006-01-02", fecha); err != nil {
+		http.Error(w, "fecha inválida, usa el formato YYYY-MM-DD", http.StatusBadRequest)
+		return
+	}
+
+	salidas, err := c.GetClosedSalidasByCendisAndDateUseCase.Execute(int32(idCendis), fecha)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("error al obtener salidas: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(salidas)
 }

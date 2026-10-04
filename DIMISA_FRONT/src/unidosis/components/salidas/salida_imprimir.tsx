@@ -1,7 +1,7 @@
-import { useState } from "react";
+/* import { useState } from "react";
 
 import logo_header from '../../assets/logo_header.png'
-import type SalidaDTO from "../../../entities/salida_DTO";
+import type {SalidaDTO} from "../../../entities/salida_DTO";
 
 interface Props {
   salida: SalidaDTO;
@@ -134,7 +134,7 @@ function handleImprimir() {
               <th>Clave</th>
               <th>Descripción</th>
               /* <th class="cantidades" >Cantidad solicitada</th> */
-              <th class="cantidades" >Cantidad surtida</th>
+            /*   <th class="cantidades" >Cantidad surtida</th>
             </tr>
           </thead>
           <tbody>
@@ -159,7 +159,7 @@ function handleImprimir() {
           </div>
         </div>
       </body>
-    </html>
+    </html> 
   `);
   ventana.document.close();
   ventana.print();
@@ -215,3 +215,4 @@ function handleImprimir() {
     </div>
   );
 }
+ */

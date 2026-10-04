@@ -419,3 +419,75 @@ func (repo *SalidasRepository) CreateSalida(salida *salidaEntity.SalidaEntity) (
 
 	return salida.Id_salida, nil
 }
+
+func (repo *SalidasRepository) GetClosedSalidasByCendisAndDate(id_cendis int32, date string) (*[]salidaEntity.SalidaDTO, error) {
+	query := `
+		SELECT
+			s.id_salida,
+			COALESCE(t.nombre, ''),
+			COALESCE(c.cendis_nombre, ''),
+			COALESCE(a.nombre_area, ''),
+			COALESCE(CONCAT_WS(' ', u.nombres, u.apellido1, u.apellido2), ''),
+			DATE_FORMAT(s.fecha, '%Y-%m-%d'),
+			sd.id_salida_detalle,
+			COALESCE(m.clave_med, ''),
+			COALESCE(m.descripcion, ''),
+			COALESCE(sd.cantidad, 0)
+		FROM salidas s
+		LEFT JOIN tipos t     ON t.id_tipo = s.tipo_id
+		LEFT JOIN cendis c    ON c.id_cendis = s.id_cendis
+		LEFT JOIN areas a     ON a.id_area = s.id_area
+		LEFT JOIN usuarios u  ON u.id_usuario = s.id_usuario
+		LEFT JOIN salidas_detalle sd ON sd.id_salida = s.id_salida
+		LEFT JOIN medicamentos m     ON m.id_medicamento = sd.id_medicamento
+		WHERE s.id_cendis = ?
+		  AND s.fecha = ?
+		  AND s.editable = 0
+		  AND s.pendiente = 0
+		ORDER BY s.id_salida, sd.id_salida_detalle`
+
+	rows, err := repo.DB.Query(query, id_cendis, date)
+	if err != nil {
+		return nil, fmt.Errorf("error al obtener salidas cerradas: %w", err)
+	}
+	defer rows.Close()
+
+	salidas := make([]salidaEntity.SalidaDTO, 0)
+	index := make(map[int32]int) // id_salida -> posición en el slice
+
+	for rows.Next() {
+		var (
+			idSalida  int32
+			s         salidaEntity.SalidaDTO
+			idDetalle sql.NullInt32
+			d         salidaEntity.SalidaDetalleDTO
+		)
+
+		if err := rows.Scan(
+			&idSalida, &s.Tipo, &s.Cendis, &s.Area, &s.Usuario, &s.Fecha,
+			&idDetalle, &d.Clave, &d.Descripcion, &d.Cantidad,
+		); err != nil {
+			return nil, fmt.Errorf("error al leer salida: %w", err)
+		}
+
+		pos, ok := index[idSalida]
+		if !ok {
+			s.Folio = fmt.Sprintf("SAL-%d", idSalida)
+			s.Claves = []salidaEntity.SalidaDetalleDTO{}
+			salidas = append(salidas, s)
+			pos = len(salidas) - 1
+			index[idSalida] = pos
+		}
+
+		// idDetalle es NULL cuando la salida no tiene claves (LEFT JOIN)
+		if idDetalle.Valid {
+			salidas[pos].Claves = append(salidas[pos].Claves, d)
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error al iterar salidas: %w", err)
+	}
+
+	return &salidas, nil
+}
